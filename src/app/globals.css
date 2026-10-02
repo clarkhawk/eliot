@@ -1,0 +1,141 @@
+@import "tailwindcss";
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+/* ───────── Tokens (clair par défaut, .dark = thème sombre) ───────── */
+:root {
+  --bg: #e9eef1;
+  --page: #ffffff;
+  --ink: #0f1623;
+  --muted: #7b8591;
+  --line: #d6dde3;
+  --field: #f5f7f9;
+  --field-ink: #0f1623;
+  --field-muted: #8a94a0;
+  --primary: #0f1623;
+  --primary-ink: #ffffff;
+  --tile: #0f1623;
+  --tile-ink: #ffffff;
+  --chip: #ffffff;
+  --chip-ink: #0f1623;
+  --bubble-in: #f1f3f5;
+  --bubble-in-ink: #0f1623;
+  --bubble-out: #0f1623;
+  --bubble-out-ink: #ffffff;
+  --composer: #f1f3f5;
+  --composer-ink: #0f1623;
+  --composer-muted: #8a94a0;
+  --accent: #f59e0b;
+  --danger: #e11d1d;
+  --backdrop: #1c1c1c;
+}
+
+.dark {
+  --bg: #101725;
+  --page: #101725;
+  --ink: #f4f6f8;
+  --muted: #8d97a5;
+  --line: #2b3444;
+  --field: #eef1f4;
+  --field-ink: #0f1623;
+  --field-muted: #7a8491;
+  --primary: #0a0f1a;
+  --primary-ink: #ffffff;
+  --tile: #e9eef1;
+  --tile-ink: #0f1623;
+  --chip: #f3f5f7;
+  --chip-ink: #0f1623;
+  --bubble-in: #d3d6da;
+  --bubble-in-ink: #0f1623;
+  --bubble-out: #eceef1;
+  --bubble-out-ink: #0f1623;
+  --composer: #6b7381;
+  --composer-ink: #ffffff;
+  --composer-muted: #e5e7eb;
+  --danger: #ff5a5a;
+}
+
+@theme inline {
+  --color-bg: var(--bg);
+  --color-page: var(--page);
+  --color-ink: var(--ink);
+  --color-muted: var(--muted);
+  --color-line: var(--line);
+  --color-field: var(--field);
+  --color-field-ink: var(--field-ink);
+  --color-field-muted: var(--field-muted);
+  --color-primary: var(--primary);
+  --color-primary-ink: var(--primary-ink);
+  --color-tile: var(--tile);
+  --color-tile-ink: var(--tile-ink);
+  --color-chip: var(--chip);
+  --color-chip-ink: var(--chip-ink);
+  --color-bubble-in: var(--bubble-in);
+  --color-bubble-in-ink: var(--bubble-in-ink);
+  --color-bubble-out: var(--bubble-out);
+  --color-bubble-out-ink: var(--bubble-out-ink);
+  --color-composer: var(--composer);
+  --color-composer-ink: var(--composer-ink);
+  --color-composer-muted: var(--composer-muted);
+  --color-accent: var(--accent);
+  --color-danger: var(--danger);
+  --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-geist-mono), ui-monospace, SFMono-Regular, monospace;
+}
+
+html,
+body {
+  height: 100%;
+  background: var(--bg);
+  color: var(--ink);
+  -webkit-tap-highlight-color: transparent;
+}
+
+@media (min-width: 768px) {
+  html,
+  body {
+    background: var(--backdrop);
+  }
+}
+
+body {
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Grille discrète derrière le logo (splash + accueil) */
+.bg-grid {
+  background-image:
+    linear-gradient(to right, color-mix(in srgb, var(--ink) 9%, transparent) 1px, transparent 1px),
+    linear-gradient(to bottom, color-mix(in srgb, var(--ink) 9%, transparent) 1px, transparent 1px);
+  background-size: 16px 16px;
+}
+
+.no-scrollbar {
+  scrollbar-width: none;
+}
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+/* Splash : masqué d'emblée si déjà vu pendant la session */
+html[data-splash="seen"] .splash {
+  display: none;
+}
+
+@keyframes ilot-progress {
+  from { width: 6%; }
+  to { width: 100%; }
+}
+@keyframes ilot-sheet {
+  from { transform: translateY(100%); }
+  to { transform: translateY(0); }
+}
+@keyframes ilot-fade {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@keyframes ilot-pop {
+  from { opacity: 0; transform: translateY(6px) scale(0.98); }
+  to { opacity: 1; transform: none; }
+}
