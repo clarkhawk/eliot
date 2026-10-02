@@ -1,6 +1,6 @@
 import type { ChatMessage, InvitePayload, Room } from "@ilot/shared";
 import { useSQLiteContext } from "expo-sqlite";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import { FlatList, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
 import { WebSocketTransport } from "../shared/WebSocketTransport";
 import { getMessages, saveMessage, saveRoom } from "../shared/storage";
@@ -11,11 +11,12 @@ type Props = { room: Room; invite: InvitePayload; pseudo: string; onBack: () => 
 export function RoomScreen({ room, invite, pseudo, onBack }: Props) {
   const db = useSQLiteContext();
   const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const clientId = useId();
+  const [sessionId, setSessionId] = useState(clientId);
   const [text, setText] = useState("");
   const [status, setStatus] = useState("hors ligne");
   const [error, setError] = useState("");
   const [now, setNow] = useState(() => Date.now());
-  const clientId = useMemo(() => `${Date.now()}-${Math.random().toString(36).slice(2)}`, []);
   const transportRef = useRef<WebSocketTransport | null>(null);
   const expired = room.expiresAt <= now;
 
@@ -26,7 +27,7 @@ export function RoomScreen({ room, invite, pseudo, onBack }: Props) {
 
   useEffect(() => {
     let active = true;
-    getMessages(db, room.code).then((stored) => { if (active) setMessages(stored); });
+    getMessages(db, room.code).then((stored) => { if (active) setMessages(stored); }).catch(() => setError("Impossible de lire l'historique local."));
     if (!invite.url || expired) return () => { active = false; };
 
     const transport = new WebSocketTransport({
@@ -38,12 +39,15 @@ export function RoomScreen({ room, invite, pseudo, onBack }: Props) {
       onError: setError,
       onPacket: (packet) => {
         if (packet.type === "history") {
-          Promise.all(packet.messages.map((message) => saveMessage(db, message))).then(() => setMessages(packet.messages));
+          Promise.all(packet.messages.map((message) => saveMessage(db, message))).then(() => setMessages(packet.messages)).catch(() => setError("Impossible d'enregistrer l'historique local."));
         }
         if (packet.type === "message") {
-          saveMessage(db, packet.message).then(() => setMessages((current) => current.some((item) => item.id === packet.message.id) ? current : [...current, packet.message]));
+          saveMessage(db, packet.message).then(() => setMessages((current) => current.some((item) => item.id === packet.message.id) ? current : [...current, packet.message])).catch(() => setError("Impossible d'enregistrer le message localement."));
         }
-        if (packet.type === "ready") saveRoom(db, packet.room);
+        if (packet.type === "ready") {
+          if (packet.sessionId) setSessionId(packet.sessionId);
+          saveRoom(db, packet.room).catch(() => setError("Impossible d'enregistrer le salon localement."));
+        }
         if (packet.type === "error") setError(packet.message);
       },
     });

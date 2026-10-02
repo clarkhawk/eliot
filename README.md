@@ -14,6 +14,8 @@ Pour afficher le lien vers un APK Android publié sur la page de téléchargemen
 
 ```bash
 NEXT_PUBLIC_ANDROID_APK_URL=https://.../ilot.apk
+NEXT_PUBLIC_ANDROID_APK_SHA256=...
+NEXT_PUBLIC_APP_VERSION=0.1.0
 ```
 
 Next 15 · React 19 · Tailwind 4 · TypeScript. Dépendances : `qrcode` (génération), `jsqr` (scan de repli), `lucide-react`, `geist` (polices).
@@ -36,6 +38,8 @@ npm run build:preview
 ```
 
 Le profil `preview` produit un APK installable avec le module natif Kotlin. Le profil `production` produit un bundle Android pour le Play Store. Un dev client EAS est nécessaire pour tester le hotspot, le service premier plan et le serveur WebSocket ; Expo Go ne contient pas ce module.
+
+Les releases Android sont publiées sur GitHub avec un fichier `ilot-android.apk.sha256`. Le workflow demande le secret `EXPO_TOKEN`; après une release `v0.1.0`, utilisez l'URL de l'artefact GitHub et sa valeur SHA-256 dans `.env.local`. La version affichée par le web provient de `NEXT_PUBLIC_APP_VERSION`.
 
 ## Écrans / routes
 

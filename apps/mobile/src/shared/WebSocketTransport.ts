@@ -23,6 +23,10 @@ export class WebSocketTransport {
 
   connect() {
     this.stopped = false;
+    if (this.isExpired()) {
+      this.options.onStatus?.("closed");
+      return;
+    }
     this.open();
   }
 
@@ -45,7 +49,11 @@ export class WebSocketTransport {
   }
 
   private open() {
-    if (this.stopped) return;
+    if (this.stopped || this.isExpired()) {
+      this.stopped = true;
+      this.options.onStatus?.("closed");
+      return;
+    }
     this.options.onStatus?.(this.attempt ? "reconnecting" : "connecting");
     const socket = new WebSocket(this.options.url);
     this.socket = socket;
@@ -70,9 +78,17 @@ export class WebSocketTransport {
     socket.onerror = () => this.options.onError?.("Impossible de joindre le salon local.");
     socket.onclose = () => {
       if (this.socket === socket) this.socket = null;
-      if (this.stopped) return;
+      if (this.stopped || this.isExpired()) {
+        this.stopped = true;
+        this.options.onStatus?.("closed");
+        return;
+      }
       const delay = Math.min(30_000, 1_000 * 2 ** Math.min(this.attempt++, 5));
       this.reconnectTimer = setTimeout(() => this.open(), delay);
     };
+  }
+
+  private isExpired() {
+    return this.options.invite.exp <= Date.now();
   }
 }

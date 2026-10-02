@@ -41,7 +41,6 @@ export function Scanner({ onResult, onError }: Props) {
       await video.play();
       setState("on");
 
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const BD = (window as any).BarcodeDetector;
       const detector = BD ? new BD({ formats: ["qr_code"] }) : null;
       const jsQR = detector ? null : (await import("jsqr")).default;

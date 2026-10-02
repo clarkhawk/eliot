@@ -2,6 +2,13 @@ import type { SQLiteDatabase } from "expo-sqlite";
 import Storage from "expo-sqlite/kv-store";
 import type { ChatMessage, Room } from "@ilot/shared";
 
+export class StorageWriteError extends Error {
+  constructor() {
+    super("Impossible d'enregistrer les données sur cet appareil.");
+    this.name = "StorageWriteError";
+  }
+}
+
 export async function migrateDatabase(db: SQLiteDatabase) {
   await db.execAsync(`
     PRAGMA journal_mode = WAL;

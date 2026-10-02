@@ -6,11 +6,13 @@
     "expo": "~57.0.26",
     "expo-build-properties": "~57.0.22",
     "expo-camera": "~57.0.6",
+    "expo-splash-screen": "~57.0.9",
     "expo-sqlite": "~57.0.3",
     "expo-status-bar": "~57.0.1",
     "ilot-network": "file:modules/ilot-network",
     "react": "19.2.3",
-    "react-native": "0.86.3"
+    "react-native": "0.86.3",
+    "react-native-svg": "15.15.4"
   },
   "devDependencies": {
     "@types/react": "~19.2.2",
@@ -20,7 +22,6 @@
     "start": "expo start",
     "android": "expo start --android",
     "ios": "expo start --ios",
-    "web": "expo start --web",
     "build:preview": "eas build --platform android --profile preview",
     "build:production": "eas build --platform android --profile production"
   },

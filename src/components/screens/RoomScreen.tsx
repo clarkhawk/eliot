@@ -22,6 +22,7 @@ export function RoomScreen() {
   const [text, setText] = useState("");
   const [menu, setMenu] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [storageError, setStorageError] = useState("");
   const [confirmDelete, setConfirmDelete] = useState(false);
   const endRef = useRef<HTMLDivElement>(null);
   const clientId = useMemo(() => (hydrated ? getClientId() : ""), [hydrated]);
@@ -50,8 +51,13 @@ export function RoomScreen() {
   function send() {
     const t = text.trim();
     if (!t || !pseudo || expired) return;
-    addMessage({ roomCode: code, authorId: clientId, author: pseudo, text: t });
-    setText("");
+    try {
+      addMessage({ roomCode: code, authorId: clientId, author: pseudo, text: t });
+      setText("");
+      setStorageError("");
+    } catch (cause) {
+      setStorageError(cause instanceof Error ? cause.message : "Impossible d'enregistrer le message sur cet appareil.");
+    }
   }
 
   return (
@@ -103,6 +109,7 @@ export function RoomScreen() {
       </header>
 
       <div className="flex flex-1 flex-col gap-1.5 overflow-y-auto px-4 py-4" aria-live="polite">
+        {storageError && <p role="alert" className="text-center text-[13px] text-danger">{storageError}</p>}
         {messages.length === 0 && (
           <p className="m-auto max-w-[240px] text-center text-[13px] text-muted">
             Aucun message pour l&apos;instant. Lancez la discussion !

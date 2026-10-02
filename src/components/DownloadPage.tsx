@@ -2,8 +2,10 @@ import Link from "next/link";
 import { Clock, Download, Smartphone } from "lucide-react";
 import { Logo } from "@/components/ui/Logo";
 import { ThemeToggle } from "@/components/ui/ThemeToggle";
+import rootPackage from "../../package.json";
 
-const APP_VERSION = "0.1.0";
+const APP_VERSION = process.env.NEXT_PUBLIC_APP_VERSION ?? rootPackage.version;
+const APK_SHA256 = process.env.NEXT_PUBLIC_ANDROID_APK_SHA256?.trim();
 const WEB_APP_HREF = "/app";
 
 /** Lien APK public (NEXT_PUBLIC_ANDROID_APK_URL). Ignoré s'il est vide ou invalide. */
@@ -94,6 +96,7 @@ export function DownloadPage() {
                 <p className="mt-3 text-center text-[12px] text-ink/70">
                   Android peut vous demander d&apos;autoriser l&apos;installation.
                 </p>
+                {APK_SHA256 && <p className="mt-2 break-all text-center font-mono text-[11px] text-ink/70">SHA-256 · {APK_SHA256}</p>}
               </>
             ) : (
               <>

@@ -28,7 +28,8 @@ class IlotNetworkModule : Module() {
         override fun onStarted(reservation: WifiManager.LocalOnlyHotspotReservation) {
           @Suppress("DEPRECATION")
           val config = reservation.wifiConfiguration
-          val code = "ILOT-" + (1000..9999).random()
+          val alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
+          val code = "ILOT-" + (1..6).map { alphabet.random() }.joinToString("")
           val port = 8765
           IlotForegroundService.start(context, port, name.take(40), code, expiresAt)
           promise.resolve(Bundle().apply {

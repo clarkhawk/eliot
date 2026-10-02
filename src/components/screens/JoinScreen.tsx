@@ -19,7 +19,7 @@ export function JoinScreen() {
     router.push(`/room/${res.room.code}`);
   }
 
-  // Lien d'invitation : /join?code=ILOT-1234&n=Nom&e=timestamp
+  // Lien d'invitation : /join?code=ILOT-A7K2Q9&n=Nom&e=timestamp
   useEffect(() => {
     const q = new URLSearchParams(window.location.search);
     const code = q.get("code");
@@ -53,7 +53,7 @@ export function JoinScreen() {
             id="code"
             value={value}
             onChange={(e) => { setValue(e.target.value); setError(""); }}
-            placeholder="ex. ILOT-8924"
+            placeholder="ex. ILOT-A7K2Q9"
             autoCapitalize="characters"
             autoComplete="off"
             spellCheck={false}

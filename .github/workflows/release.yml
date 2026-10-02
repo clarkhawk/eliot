@@ -1,0 +1,38 @@
+name: Android Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: apps/mobile/package-lock.json
+      - run: npm ci
+        working-directory: apps/mobile
+      - name: Build APK with EAS
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+        run: |
+          cd apps/mobile
+          npx eas-cli@latest build --platform android --profile preview --non-interactive --json > eas-build.json
+          node -e "const fs=require('fs'); const data=JSON.parse(fs.readFileSync('eas-build.json','utf8')); const url=data[0]?.artifacts?.buildUrl || data[0]?.artifactUrl; if (!url) throw new Error('EAS did not return an APK URL'); fs.writeFileSync('apk-url.txt', url);"
+          curl -L "$(cat apk-url.txt)" -o ../../ilot-android.apk
+          sha256sum ../../ilot-android.apk | tee ../../ilot-android.apk.sha256
+      - name: Publish GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          name: Îlot ${{ github.ref_name }}
+          generate_release_notes: true
+          files: |
+            ilot-android.apk
+            ilot-android.apk.sha256

@@ -23,6 +23,13 @@ const K_CLIENT = "ilot:client-id";
 const listeners = new Set<() => void>();
 const emit = () => listeners.forEach((l) => l());
 
+export class StorageWriteError extends Error {
+  constructor() {
+    super("Impossible d'enregistrer les données sur cet appareil.");
+    this.name = "StorageWriteError";
+  }
+}
+
 if (typeof window !== "undefined") {
   window.addEventListener("storage", emit);
 }
@@ -44,7 +51,7 @@ function write(key: string, value: string, session = false) {
   try {
     (session ? sessionStorage : localStorage).setItem(key, value);
   } catch {
-    /* quota / navigation privée : on ignore */
+    throw new StorageWriteError();
   }
   emit();
 }
@@ -74,7 +81,9 @@ export function getClientId(): string {
     id = crypto.randomUUID();
     try {
       sessionStorage.setItem(K_CLIENT, id);
-    } catch {}
+    } catch {
+      throw new StorageWriteError();
+    }
   }
   return id;
 }
@@ -125,7 +134,7 @@ export function deleteRoom(code: string) {
 export function generateCode(): string {
   const taken = new Set(getRooms().map((r) => r.code));
   for (let i = 0; i < 50; i++) {
-    const code = `ILOT-${Math.floor(1000 + Math.random() * 9000)}`;
+    const code = `ILOT-${Array.from({ length: 6 }, () => "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"[Math.floor(Math.random() * 36)]).join("")}`;
     if (!taken.has(code)) return code;
   }
   return `ILOT-${Date.now().toString().slice(-6)}`;
@@ -134,7 +143,6 @@ export function generateCode(): string {
 export function createRoom(input: {
   name: string;
   durationMs: number;
-  location?: Room["location"];
 }): Room {
   const now = Date.now();
   const room: Room = {
@@ -143,7 +151,6 @@ export function createRoom(input: {
     createdAt: now,
     expiresAt: now + input.durationMs,
     host: true,
-    location: input.location,
   };
   saveRoom(room);
   return room;

@@ -49,7 +49,7 @@ Le service garde en mémoire les messages du salon et renvoie `ready`, `history`
 
 ## Permissions Android
 
-La configuration demande `CAMERA`, `ACCESS_FINE_LOCATION`, `NEARBY_WIFI_DEVICES`, `CHANGE_WIFI_STATE` et `FOREGROUND_SERVICE`. Android peut encore afficher une confirmation système pour l'association Wi-Fi.
+La configuration demande `CAMERA`, `NEARBY_WIFI_DEVICES`, `CHANGE_WIFI_STATE` et `FOREGROUND_SERVICE`. Android peut encore afficher une confirmation système pour l'association Wi-Fi.
 
 ## Limites et suite
 

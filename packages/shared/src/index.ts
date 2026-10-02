@@ -4,7 +4,6 @@ export type Room = {
   createdAt: number;
   expiresAt: number;
   host: boolean;
-  location?: { lat: number; lng: number };
 };
 
 export type Message = {
@@ -33,13 +32,13 @@ export type ClientPacket =
   | { type: "message"; message: Omit<ChatMessage, "roomCode"> };
 
 export type ServerPacket =
-  | { type: "ready"; room: Room }
+  | { type: "ready"; room: Room; sessionId?: string }
   | { type: "history"; messages: ChatMessage[] }
   | { type: "message"; message: ChatMessage }
   | { type: "error"; message: string };
 
 export function normalizeCode(input: string): string | null {
-  const match = input.trim().toUpperCase().match(/^(?:ILOT)?[\s-]*([0-9]{4,6})$/);
+  const match = input.trim().toUpperCase().match(/^(?:ILOT[\s-]*)?([A-Z0-9]{6})$/);
   return match ? `ILOT-${match[1]}` : null;
 }
 
@@ -85,7 +84,7 @@ export function parseInvite(text: string): InvitePayload | string | null {
     // The input may be a plain access code.
   }
 
-  return normalizeCode(value) ? value : null;
+  return normalizeCode(value);
 }
 
 export function encodePacket(packet: ClientPacket): string {

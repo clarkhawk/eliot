@@ -1,5 +1,4 @@
 "use client";
-import { MapPin } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { Button } from "@/components/ui/Button";
@@ -7,7 +6,6 @@ import { Input, Label } from "@/components/ui/Field";
 import { ScreenHeader } from "@/components/ui/ScreenHeader";
 import { Wheel } from "@/components/ui/Wheel";
 import { createRoom } from "@/lib/store";
-import type { Room } from "@/lib/types";
 
 type Unit = "h" | "m" | "s";
 
@@ -16,35 +14,21 @@ export function CreateScreen() {
   const [name, setName] = useState("");
   const [time, setTime] = useState({ h: 0, m: 50, s: 0 });
   const [active, setActive] = useState<Unit>("m");
-  const [location, setLocation] = useState<Room["location"]>();
-  const [locState, setLocState] = useState<"idle" | "loading" | "ok" | "denied">("idle");
   const [error, setError] = useState("");
 
   const set = (u: Unit) => (v: number) => setTime((t) => ({ ...t, [u]: v }));
-
-  function askLocation() {
-    if (!("geolocation" in navigator)) return setLocState("denied");
-    setLocState("loading");
-    navigator.geolocation.getCurrentPosition(
-      (p) => {
-        setLocation({ lat: p.coords.latitude, lng: p.coords.longitude });
-        setLocState("ok");
-      },
-      () => setLocState("denied"),
-      { timeout: 8000 },
-    );
-  }
 
   function submit() {
     const durationMs = (time.h * 3600 + time.m * 60 + time.s) * 1000;
     if (!name.trim()) return setError("Donnez un nom à votre salon.");
     if (durationMs < 60_000) return setError("Choisissez une durée d'au moins 1 minute.");
-    const room = createRoom({ name, durationMs, location });
-    router.push(`/room/${room.code}`);
+    try {
+      const room = createRoom({ name, durationMs });
+      router.push(`/room/${room.code}`);
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "Impossible d'enregistrer le salon sur cet appareil.");
+    }
   }
-
-  const locLabel =
-    locState === "ok" ? "Ma position · enregistrée" : locState === "loading" ? "Localisation…" : "Ma Position";
 
   return (
     <>
@@ -62,19 +46,6 @@ export function CreateScreen() {
             placeholder="ex. Révisions Groupe 3"
             autoComplete="off"
           />
-        </div>
-
-        <div className="mt-5">
-          <Label>Localisation</Label>
-          <button
-            type="button"
-            onClick={askLocation}
-            className="flex h-12 w-full items-center gap-3 rounded-xl border border-line bg-field px-4 text-left text-[15px] text-field-ink"
-          >
-            <MapPin size={18} />
-            <span className="flex-1">{locLabel}</span>
-            {locState === "denied" && <span className="text-[12px] text-danger">refusée</span>}
-          </button>
         </div>
 
         <hr className="my-6 border-line" />
