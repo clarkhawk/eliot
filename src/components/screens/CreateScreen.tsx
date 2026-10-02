@@ -48,7 +48,7 @@ export function CreateScreen() {
 
   return (
     <>
-      <ScreenHeader title="Créer un salon" subtitle="Configurez un espace temporaire pour échanger" backHref="/" />
+      <ScreenHeader title="Créer un salon" subtitle="Configurez un espace temporaire pour échanger" backHref="/app" />
 
       <div className="flex-1 overflow-y-auto px-5 pt-3">
         <div>

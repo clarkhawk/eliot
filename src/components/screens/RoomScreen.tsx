@@ -48,7 +48,7 @@ export function RoomScreen() {
       <div className="flex flex-1 flex-col items-center justify-center gap-4 bg-page px-8 text-center">
         <p className="text-lg font-bold">Salon introuvable</p>
         <p className="text-[14px] text-muted">Il a été supprimé de cet appareil ou n&apos;a jamais été rejoint.</p>
-        <button onClick={() => router.push("/")} className="rounded-xl bg-primary px-5 py-3 text-[14px] font-semibold text-primary-ink">
+        <button onClick={() => router.push("/app")} className="rounded-xl bg-primary px-5 py-3 text-[14px] font-semibold text-primary-ink">
           Retour à l&apos;accueil
         </button>
       </div>
@@ -68,7 +68,7 @@ export function RoomScreen() {
   return (
     <div className="relative flex flex-1 flex-col bg-page">
       <header className="flex items-center gap-3 border-b border-line px-4 pb-3 pt-[max(1rem,env(safe-area-inset-top))]">
-        <IconButton label="Retour" onClick={() => router.push("/")}>
+        <IconButton label="Retour" onClick={() => router.push("/app")}>
           <ChevronLeft size={20} />
         </IconButton>
         <div className="min-w-0 flex-1">
@@ -192,7 +192,7 @@ export function RoomScreen() {
           </button>
           <button
             className="h-12 flex-1 rounded-xl bg-danger text-[14px] font-semibold text-white"
-            onClick={() => { deleteRoom(code); router.push("/"); }}
+            onClick={() => { deleteRoom(code); router.push("/app"); }}
           >
             Supprimer
           </button>

@@ -39,7 +39,7 @@ export function JoinScreen() {
 
   return (
     <>
-      <ScreenHeader title="Rejoindre" subtitle="Entrez un code ou scannez pour participer" backHref="/" />
+      <ScreenHeader title="Rejoindre" subtitle="Entrez un code ou scannez pour participer" backHref="/app" />
 
       <form
         className="flex flex-1 flex-col overflow-y-auto px-5 pt-4"
