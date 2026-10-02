@@ -12,6 +12,25 @@ npm run dev      # http://localhost:3000
 
 Next 15 · React 19 · Tailwind 4 · TypeScript. Dépendances : `qrcode` (génération), `jsqr` (scan de repli), `lucide-react`, `geist` (polices).
 
+## Application mobile
+
+Le prototype React Native se trouve dans `apps/mobile`.
+
+```bash
+cd apps/mobile
+npm install
+npx expo start
+```
+
+La configuration Android est prête pour un APK de test via EAS :
+
+```bash
+npx eas login
+npm run build:preview
+```
+
+Le profil `preview` produit un APK installable. Le profil `production` produit un bundle Android pour le Play Store. L'interface mobile et SQLite sont en place ; le scanner QR natif et le réseau local Android restent à brancher.
+
 ## Écrans / routes
 
 | Route | Écran |
