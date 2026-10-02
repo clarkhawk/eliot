@@ -13,7 +13,6 @@ export function HomeScreen() {
   const router = useRouter();
   const rooms = useRooms();
   const now = useNow();
-  const androidUrl = process.env.NEXT_PUBLIC_ANDROID_APK_URL;
 
   return (
     <div className="flex flex-1 flex-col overflow-y-auto px-5 pb-8 pt-[max(1.25rem,env(safe-area-inset-top))]">
@@ -35,31 +34,6 @@ export function HomeScreen() {
           Rejoindre un salon
         </Button>
       </div>
-
-      <section className="mt-8 rounded-2xl border border-line bg-page px-4 py-4 shadow-sm" aria-labelledby="download-title">
-        <div className="flex items-start gap-3">
-          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-accent text-[18px] font-bold text-ink">
-            ↓
-          </div>
-          <div className="min-w-0 flex-1">
-            <h2 id="download-title" className="text-[15px] font-bold">Emportez Îlot avec vous</h2>
-            <p className="mt-1 text-[13px] leading-snug text-muted">
-              Installez l&apos;application Android pour préparer les salons locaux depuis votre téléphone.
-            </p>
-            {androidUrl ? (
-              <a
-                href={androidUrl}
-                download
-                className="mt-3 inline-flex h-10 items-center rounded-xl bg-primary px-4 text-[13px] font-semibold text-primary-ink transition active:scale-[0.98]"
-              >
-                Télécharger l&apos;APK Android
-              </a>
-            ) : (
-              <p className="mt-3 font-mono text-[11px] text-muted">APK bientôt disponible</p>
-            )}
-          </div>
-        </div>
-      </section>
 
       {rooms.length > 0 && (
         <section className="mt-10" aria-label="Salons récents">
