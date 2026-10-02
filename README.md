@@ -10,6 +10,12 @@ npm install
 npm run dev      # http://localhost:3000
 ```
 
+Pour afficher le lien de téléchargement Android sur la page d'accueil, renseignez l'URL publique de l'APK dans `.env.local` :
+
+```bash
+NEXT_PUBLIC_ANDROID_APK_URL=https://.../ilot.apk
+```
+
 Next 15 · React 19 · Tailwind 4 · TypeScript. Dépendances : `qrcode` (génération), `jsqr` (scan de repli), `lucide-react`, `geist` (polices).
 
 ## Application mobile
