@@ -1,71 +1,56 @@
 # Îlot
 
-Messagerie offline en réseau local — créez un salon, partagez un QR code, discutez sans internet.
+Îlot est une messagerie temporaire en réseau local. La pile retenue est **React Native avec Expo**, complétée par un **module natif Kotlin Android** pour les fonctions que JavaScript ne peut pas fournir : hotspot, association Wi-Fi et service réseau en premier plan.
 
-Remake du projet PHP original **Opal Talk**, repensé pour Android (react natif) sous le nom **Îlot**, avec une architecture 100 % locale (hotspot + WebSocket).
+Le web est une démonstration locale. Il conserve les messages dans le navigateur et n'établit pas de connexion entre appareils.
 
-## Concept
+## Périmètre du MVP
 
-L'utilisateur peut :
-- **Créer un salon** : lui donner un nom, une date d'expiration, puis générer un lien et un QR code de partage
-- **Rejoindre un salon** : en scannant le QR code, ou en tapant le nom d'un salon déjà rejoint auparavant (recherché dans l'historique local)
+- créer un salon Android avec une expiration ;
+- démarrer un `LocalOnlyHotspot` et un serveur WebSocket local ;
+- rejoindre avec un QR scanné par `expo-camera` ;
+- connecter le client mobile au Wi-Fi puis au WebSocket ;
+- afficher l'historique SQLite et les nouveaux messages ;
+- passer automatiquement en lecture seule après expiration ;
+- conserver une règle unique : une invitation expirée est refusée partout.
 
-Tout fonctionne **sans connexion internet**, via un réseau local créé par l'appareil hôte.
+## Architecture mobile
 
-## Fonctionnalités du MVP
+### JavaScript / TypeScript
 
-- Création de salon avec nom + date d'expiration
-- Génération automatique d'un QR code et d'un lien de partage
-- Connexion au salon par scan QR ou saisie du nom (salons déjà rejoints)
-- Messagerie texte simple, en temps réel
-- Historique des messages conservé localement, même après expiration du salon
-- Identité par pseudo à l'entrée du salon (pas de compte)
+`apps/mobile` contient l'application Expo, l'écran de salon, le scanner QR, `WebSocketTransport` et le stockage SQLite (`expo-sqlite`). Le paquet `packages/shared` contient les types, le protocole de paquets et `parseInvite`, utilisé par le web et le mobile.
 
-## Architecture
+### Module Kotlin
 
-### Appareil hôte (créateur du salon)
+`apps/mobile/modules/ilot-network` est un module Expo local, inclus dans les builds EAS du dev client.
 
-| Composant | Rôle |
+| Responsabilité | API Android |
 |---|---|
-| Service premier plan (`Foreground Service`) | Maintient le hotspot et le serveur actifs, notification persistante |
-| Hotspot local (`LocalOnlyHotspot`, API 26+) | Crée le point d'accès Wifi auquel les invités se connectent |
-| Serveur WebSocket embarqué | Relaie les messages entre tous les participants connectés |
-| Stockage local (`Room`) | Historique des messages du salon |
+| Créer le réseau hôte | `WifiManager.LocalOnlyHotspot` |
+| Rejoindre le réseau invité | `WifiNetworkSuggestion` |
+| Maintenir le serveur actif | `ForegroundService` |
+| Relayer le chat | `Java-WebSocket` embarqué |
 
-### Appareil invité
+Le service garde en mémoire les messages du salon et renvoie `ready`, `history` et `message`. Chaque client persiste ensuite l'historique dans SQLite. Le stockage local reste disponible après expiration, mais l'envoi et la reconnexion sont bloqués.
 
-| Composant | Rôle |
-|---|---|
-| Scan QR / Saisie du nom | Récupère les identifiants réseau du salon (SSID, mot de passe, IP, port, expiration) |
-| Connexion Wifi (`WifiNetworkSuggestion`, API 29+) | Rejoint le hotspot de l'hôte |
-| Client WebSocket | Envoie/reçoit les messages en temps réel |
-| Stockage local (`Room`) | Historique des messages + salons déjà rejoints (SSID/pass), pour permettre la recherche par nom |
+## Flux réseau
 
-### Flux de connexion
+1. L'hôte demande un hotspot local, puis démarre le service premier plan et le serveur WebSocket.
+2. Le module renvoie une invitation JSON contenant le salon, le code, l'expiration, le SSID, le mot de passe et l'URL `ws://` locale.
+3. L'invité scanne le QR, `parseInvite` valide l'expiration, puis `WifiNetworkSuggestion` demande à Android de rejoindre le réseau.
+4. `WebSocketTransport` envoie un paquet `hello`, reçoit l'historique, puis échange les paquets de messages.
 
-1. **Créer un salon** : l'hôte démarre le service premier plan → active le hotspot → lance le serveur WebSocket → génère un JSON `{ salon, ssid, pass, ip, port, exp }` → l'encode en QR code
-2. **Rejoindre un salon** : l'invité scanne le QR (ou récupère les identifiants d'un salon déjà rejoint) → vérifie que `exp` n'est pas dépassé → rejoint le Wifi (confirmation système requise sur Android 10+) → ouvre une connexion WebSocket vers `ip:port` → envoie son pseudo
-3. **Chat** : l'hôte diffuse l'historique du salon au nouvel arrivant, puis relaie chaque message à tous les participants connectés
+## Choix assumés
 
-## Stack technique
+- **Android en priorité** : les APIs de hotspot et de connexion Wi-Fi n'ont pas d'équivalent web fiable et leur équivalent iOS impose une autre architecture.
+- **Dev client EAS** : Expo Go ne contient pas le module Kotlin. Utiliser `npm run build:preview` depuis `apps/mobile` pour générer l'APK de test.
+- **`ws://` en réseau local** : un certificat TLS valide n'est pas réaliste pour l'adresse privée temporaire d'un hotspot. `usesCleartextTraffic: true` est donc déclaré explicitement dans `app.json` pour ce prototype.
+- **Données locales** : aucune synchronisation internet ni compte utilisateur. Le QR mobile est le mécanisme de transmission des paramètres du réseau.
 
-- **Langage** : React natif
-- **Réseau local** : `WifiManager.LocalOnlyHotspot` (hôte), `WifiNetworkSuggestion` (invité)
-- **WebSocket** : `Java-WebSocket` ou `Ktor` embarqué (serveur), `OkHttp` ou `Java-WebSocket` (client)
-- **QR code** : `ZXing` (génération et scan)
-- **Stockage local** : `Room` (SQLite)
-- **Service** : `Foreground Service` + `NotificationCompat`
+## Permissions Android
 
-## Limites connues du MVP
+La configuration demande `CAMERA`, `ACCESS_FINE_LOCATION`, `NEARBY_WIFI_DEVICES`, `CHANGE_WIFI_STATE` et `FOREGROUND_SERVICE`. Android peut encore afficher une confirmation système pour l'association Wi-Fi.
 
-- Le salon reste actif uniquement tant que l'app de l'hôte est ouverte (pas de vrai service en arrière-plan pour l'instant)
-- La connexion au Wifi via QR demande une confirmation manuelle de l'utilisateur sur Android 10+ (popup système)
-- "Rejoindre par nom" ne fonctionne que pour les salons déjà rejoints une fois (pas de découverte réseau globale en V1)
-- MVP Android uniquement — pas de version iOS prévue dans un premier temps (contraintes fortes d'Apple sur la connexion Wifi programmatique)
+## Limites et suite
 
-## Roadmap possible (post-MVP)
-
-- Découverte des salons à proximité par nom (NSD/mDNS), sans passer par l'historique local
-- Partage de fichiers/images
-- Service en arrière-plan plus robuste
-- Version iOS (via Multipeer Connectivity ou une approche différente)
+Le serveur est limité à l'appareil hôte et à la durée de vie du service. La découverte globale par nom, les fichiers, une persistance serveur plus robuste et une éventuelle version iOS sont hors MVP.

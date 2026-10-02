@@ -1,10 +1,14 @@
 import { StatusBar } from "expo-status-bar";
-import { SQLiteProvider } from "expo-sqlite";
+import { SQLiteProvider, useSQLiteContext } from "expo-sqlite";
 import { useState } from "react";
 import { StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
+import { parseInvite, type InvitePayload, type Room } from "@ilot/shared";
+import { Scanner } from "./src/screens/Scanner";
+import { RoomScreen } from "./src/screens/RoomScreen";
+import { IlotNetwork } from "./src/native/IlotNetwork";
 import { migrateDatabase } from "./src/shared/storage";
 
-type Screen = "home" | "create" | "join";
+type Screen = "home" | "create" | "join" | "room";
 
 export default function App() {
   return (
@@ -16,14 +20,18 @@ export default function App() {
 
 function MobileApp() {
   const [screen, setScreen] = useState<Screen>("home");
+  const [room, setRoom] = useState<Room | null>(null);
+  const [invite, setInvite] = useState<InvitePayload | null>(null);
+  const [pseudo] = useState("Moi");
 
   return (
     <View style={styles.container}>
       <StatusBar style="dark" />
       <View style={styles.grid} />
       {screen === "home" && <HomeScreen onCreate={() => setScreen("create")} onJoin={() => setScreen("join")} />}
-      {screen === "create" && <CreateScreen onBack={() => setScreen("home")} />}
-      {screen === "join" && <JoinScreen onBack={() => setScreen("home")} />}
+      {screen === "create" && <CreateScreen onBack={() => setScreen("home")} onRoom={(nextRoom, nextInvite) => { setRoom(nextRoom); setInvite(nextInvite); setScreen("room"); }} />}
+      {screen === "join" && <JoinScreen onBack={() => setScreen("home")} onRoom={(nextRoom, nextInvite) => { setRoom(nextRoom); setInvite(nextInvite); setScreen("room"); }} />}
+      {screen === "room" && room && invite && <RoomScreen room={room} invite={invite} pseudo={pseudo} onBack={() => setScreen("home")} />}
     </View>
   );
 }
@@ -53,7 +61,8 @@ function HomeScreen({ onCreate, onJoin }: { onCreate: () => void; onJoin: () => 
   );
 }
 
-function CreateScreen({ onBack }: { onBack: () => void }) {
+function CreateScreen({ onBack, onRoom }: { onBack: () => void; onRoom: (room: Room, invite: InvitePayload) => void }) {
+  const db = useSQLiteContext();
   const [name, setName] = useState("");
   const [error, setError] = useState("");
 
@@ -75,7 +84,18 @@ function CreateScreen({ onBack }: { onBack: () => void }) {
       {error ? <Text style={styles.error}>{error}</Text> : null}
       <TouchableOpacity
         activeOpacity={0.8}
-        onPress={() => setError(name.trim() ? "Le réseau local sera configuré dans l'étape Android." : "Donnez un nom à votre salon.")}
+        onPress={async () => {
+          if (!name.trim()) { setError("Donnez un nom à votre salon."); return; }
+          try {
+            const invite = await IlotNetwork.startHost(name.trim(), Date.now() + 60 * 60 * 1000);
+            const room = { code: invite.code, name: invite.salon, createdAt: Date.now(), expiresAt: invite.exp, host: true };
+            const { saveRoom } = await import("./src/shared/storage");
+            await saveRoom(db, room);
+            onRoom(room, invite);
+          } catch {
+            setError("Le dev client Android est requis pour démarrer le réseau local.");
+          }
+        }}
         style={[styles.primaryButton, styles.formButton]}
       >
         <Text style={styles.primaryButtonText}>Continuer</Text>
@@ -85,7 +105,8 @@ function CreateScreen({ onBack }: { onBack: () => void }) {
   );
 }
 
-function JoinScreen({ onBack }: { onBack: () => void }) {
+function JoinScreen({ onBack, onRoom }: { onBack: () => void; onRoom: (room: Room, invite: InvitePayload) => void }) {
+  const db = useSQLiteContext();
   const [code, setCode] = useState("");
   const [message, setMessage] = useState("");
 
@@ -94,10 +115,12 @@ function JoinScreen({ onBack }: { onBack: () => void }) {
       <BackButton onPress={onBack} />
       <Text style={styles.screenTitle}>Rejoindre</Text>
       <Text style={styles.subtitle}>Scannez une invitation ou saisissez son code.</Text>
-      <View style={styles.scanPlaceholder}>
-        <Text style={styles.scanTitle}>Scanner un QR code</Text>
-        <Text style={styles.scanText}>Le scanner natif sera ajouté avec la permission caméra.</Text>
-      </View>
+      <Scanner onScan={(raw) => {
+        const parsed = parseInvite(raw);
+        if (!parsed || typeof parsed === "string" || !parsed.url) { setMessage("Cette invitation est invalide, expirée ou sans réseau mobile."); return; }
+        const room = { code: parsed.code, name: parsed.salon, createdAt: Date.now(), expiresAt: parsed.exp, host: false };
+        import("./src/shared/storage").then(({ saveRoom }) => saveRoom(db, room).then(() => onRoom(room, parsed)));
+      }} />
       <Text style={styles.label}>CODE D'ACCÈS</Text>
       <TextInput
         autoCapitalize="characters"
@@ -110,7 +133,10 @@ function JoinScreen({ onBack }: { onBack: () => void }) {
       />
       <TouchableOpacity
         activeOpacity={0.8}
-        onPress={() => setMessage(code.trim() ? "La connexion réseau sera ajoutée avec le module Android." : "Entrez un code d'accès.")}
+        onPress={() => {
+          const parsed = parseInvite(code);
+          setMessage(parsed && typeof parsed !== "string" ? "Le QR mobile complet est nécessaire pour rejoindre ce réseau." : "Scannez le QR code de l'hôte pour rejoindre le salon.");
+        }}
         style={[styles.primaryButton, styles.formButton]}
       >
         <Text style={styles.primaryButtonText}>Rejoindre le salon</Text>

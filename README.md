@@ -1,7 +1,7 @@
 # Îlot — interface Next.js + Tailwind
 
-Implémentation de la maquette Îlot (splash, accueil, créer un salon, rejoindre, chat, thèmes clair/sombre).
-Le concept d'origine (hotspot + WebSocket Android) est dans `CONCEPT.md`.
+Interface web de démonstration et client Android Îlot (accueil, création, rejoindre, chat, thèmes clair/sombre).
+L'architecture retenue (React Native/Expo + module natif Kotlin) est décrite dans `CONCEPT.md`.
 
 ## Lancer
 
@@ -10,7 +10,7 @@ npm install
 npm run dev      # http://localhost:3000
 ```
 
-Pour afficher le lien de téléchargement Android sur la page d'accueil, renseignez l'URL publique de l'APK dans `.env.local` :
+Pour afficher le lien vers un APK Android publié sur la page de téléchargement, renseignez son URL publique dans `.env.local` :
 
 ```bash
 NEXT_PUBLIC_ANDROID_APK_URL=https://.../ilot.apk
@@ -20,7 +20,7 @@ Next 15 · React 19 · Tailwind 4 · TypeScript. Dépendances : `qrcode` (géné
 
 ## Application mobile
 
-Le prototype React Native se trouve dans `apps/mobile`.
+Le client Android React Native/Expo se trouve dans `apps/mobile`.
 
 ```bash
 cd apps/mobile
@@ -35,16 +35,17 @@ npx eas login
 npm run build:preview
 ```
 
-Le profil `preview` produit un APK installable. Le profil `production` produit un bundle Android pour le Play Store. L'interface mobile et SQLite sont en place ; le scanner QR natif et le réseau local Android restent à brancher.
+Le profil `preview` produit un APK installable avec le module natif Kotlin. Le profil `production` produit un bundle Android pour le Play Store. Un dev client EAS est nécessaire pour tester le hotspot, le service premier plan et le serveur WebSocket ; Expo Go ne contient pas ce module.
 
 ## Écrans / routes
 
 | Route | Écran |
 |---|---|
-| `/` | Splash (1×/session) puis Bienvenue + salons récents |
+| `/` | Page de téléchargement Android |
+| `/app` | Accueil de l'application web + salons récents |
 | `/create` | Nom, localisation, expiration (roues h/min/s) |
 | `/join` | Scan QR (caméra) ou saisie du code / du nom d'un salon déjà rejoint. Accepte `?code=…` |
-| `/room/[code]` | Chat, partage (QR + code + lien), pseudo, expiration en lecture seule |
+| `/room/[code]` | Chat local, code du salon, pseudo, expiration en lecture seule |
 
 ## Structure
 
@@ -53,7 +54,7 @@ src/
   app/                 routes (pages minces) + globals.css (tokens de thème)
   components/ui/       Button, IconButton, Input/Label, Sheet, Wheel, Logo, ThemeToggle, ScreenHeader, AppShell
   components/screens/  Home, Create, Join, Room
-  components/          Scanner, ShareSheet, PseudoSheet, Splash
+  components/          Scanner, PseudoSheet, Splash
   lib/store.ts         stockage local + logique salons / invitations / messages
   lib/theme.ts         thème clair/sombre (classe `dark`, sans flash)
 ```
@@ -62,7 +63,9 @@ Thème : variables CSS sémantiques (`bg-bg`, `text-ink`, `bg-field`, `bg-primar
 
 ## Ce qui est réel / ce qui est simulé
 
-- Salons, historique, pseudo, expiration, QR, lien d'invitation : fonctionnels, **100 % local** (`localStorage`).
-- Temps réel : synchronisé entre onglets d'un même navigateur (événement `storage`). Ouvrez le salon dans deux onglets avec deux pseudos pour tester.
+- Salons, historique, pseudo et expiration : fonctionnels, **100 % local** (`localStorage`). La version web affiche un bandeau de démo et ne propose pas le partage QR/lien entre appareils.
+- Temps réel web : synchronisé entre onglets d'un même navigateur (événement `storage`). Ouvrez le salon dans deux onglets avec deux pseudos pour tester.
 - **Pas de réseau entre appareils** : hotspot `LocalOnlyHotspot`, `WifiNetworkSuggestion` et serveur WebSocket embarqué sont des API Android natives, impossibles depuis un navigateur. Le point de branchement est `addMessage()` / `useMessages()` dans `lib/store.ts` (remplacer par un client WebSocket vers `ip:port` du QR).
 - Le QR encode `{ v, salon, code, exp }` (sans `ssid/pass/ip/port`, inutiles côté web).
+
+Le transport mobile utilise `ws://` sur le hotspot local. Le certificat TLS n'est pas réaliste dans ce contexte sans infrastructure de confiance ; `usesCleartextTraffic: true` est donc activé explicitement dans `apps/mobile/app.json` comme choix assumé pour le prototype. Les invitations expirées sont rejetées par le paquet partagé, sur web comme sur mobile.

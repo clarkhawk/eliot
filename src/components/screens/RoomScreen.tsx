@@ -3,7 +3,6 @@ import { ArrowUp, ChevronLeft, MoreHorizontal } from "lucide-react";
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { PseudoSheet } from "@/components/PseudoSheet";
-import { ShareSheet } from "@/components/ShareSheet";
 import { IconButton } from "@/components/ui/Button";
 import { Sheet } from "@/components/ui/Sheet";
 import { formatRemaining, formatTime } from "@/lib/format";
@@ -22,20 +21,10 @@ export function RoomScreen() {
 
   const [text, setText] = useState("");
   const [menu, setMenu] = useState(false);
-  const [share, setShare] = useState(false);
   const [copied, setCopied] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const endRef = useRef<HTMLDivElement>(null);
   const clientId = useMemo(() => (hydrated ? getClientId() : ""), [hydrated]);
-
-  // Ouverture automatique du partage après création (?share=1)
-  useEffect(() => {
-    const q = new URLSearchParams(window.location.search);
-    if (q.get("share") === "1") {
-      setShare(true);
-      window.history.replaceState(null, "", window.location.pathname);
-    }
-  }, []);
 
   useEffect(() => {
     endRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
@@ -86,11 +75,6 @@ export function RoomScreen() {
           <>
             <button aria-label="Fermer le menu" className="fixed inset-0 z-10 cursor-default" onClick={() => setMenu(false)} />
             <div className="absolute right-4 top-[68px] z-20 w-56 overflow-hidden rounded-2xl border border-line bg-page text-[14px] shadow-xl [animation:ilot-pop_.15s_ease-out]">
-              {!expired && (
-                <button className="block w-full px-4 py-3 text-left hover:bg-ink/5" onClick={() => { setMenu(false); setShare(true); }}>
-                  Partager le salon
-                </button>
-              )}
               <button
                 className="block w-full px-4 py-3 text-left hover:bg-ink/5"
                 onClick={async () => {
@@ -178,7 +162,6 @@ export function RoomScreen() {
       </form>
 
       <PseudoSheet open={!pseudo} initial={lastPseudo ?? ""} />
-      <ShareSheet room={room} open={share && !!pseudo} onClose={() => setShare(false)} />
       <Sheet open={confirmDelete} onClose={() => setConfirmDelete(false)} title="Supprimer le salon">
         <p className="-mt-2 text-[13px] text-muted">
           Le salon et son historique seront supprimés de cet appareil uniquement.

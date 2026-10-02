@@ -2,7 +2,7 @@
   "expo": {
     "name": "Îlot",
     "slug": "ilot",
-    "version": "1.0.0",
+    "version": "0.1.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
@@ -11,6 +11,13 @@
     },
     "android": {
       "package": "com.salomon.ilot",
+      "permissions": [
+        "CAMERA",
+        "ACCESS_FINE_LOCATION",
+        "NEARBY_WIFI_DEVICES",
+        "CHANGE_WIFI_STATE",
+        "FOREGROUND_SERVICE"
+      ],
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",
         "foregroundImage": "./assets/android-icon-foreground.png",
@@ -23,7 +30,16 @@
       "favicon": "./assets/favicon.png"
     },
     "plugins": [
-      "expo-sqlite"
+      "expo-sqlite",
+      "expo-camera",
+      [
+        "expo-build-properties",
+        {
+          "android": {
+            "usesCleartextTraffic": true
+          }
+        }
+      ]
     ]
   }
 }

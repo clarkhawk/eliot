@@ -1,5 +1,4 @@
-import type { InvitePayload } from "./invites";
-import { decodePacket, encodePacket, type ChatMessage, type ServerPacket } from "./protocol";
+import { decodePacket, encodePacket, type ChatMessage, type InvitePayload, type ServerPacket } from "@ilot/shared";
 
 type TransportStatus = "idle" | "connecting" | "connected" | "reconnecting" | "closed";
 

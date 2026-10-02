@@ -40,7 +40,7 @@ export function CreateScreen() {
     if (!name.trim()) return setError("Donnez un nom à votre salon.");
     if (durationMs < 60_000) return setError("Choisissez une durée d'au moins 1 minute.");
     const room = createRoom({ name, durationMs, location });
-    router.push(`/room/${room.code}?share=1`);
+    router.push(`/room/${room.code}`);
   }
 
   const locLabel =

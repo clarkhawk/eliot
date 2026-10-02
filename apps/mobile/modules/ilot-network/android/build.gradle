@@ -1,0 +1,13 @@
+apply plugin: 'com.android.library'
+apply plugin: 'org.jetbrains.kotlin.android'
+
+android {
+  namespace 'expo.modules.ilotnetwork'
+  compileSdkVersion project.ext.defaultConfig.compileSdkVersion
+  defaultConfig { minSdkVersion project.ext.defaultConfig.minSdkVersion }
+}
+
+dependencies {
+  implementation project(':expo-modules-core')
+  implementation 'org.java-websocket:Java-WebSocket:1.5.7'
+}

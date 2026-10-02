@@ -1,7 +1,6 @@
 import type { SQLiteDatabase } from "expo-sqlite";
 import Storage from "expo-sqlite/kv-store";
-import type { ChatMessage } from "./protocol";
-import type { Room } from "./invites";
+import type { ChatMessage, Room } from "@ilot/shared";
 
 export async function migrateDatabase(db: SQLiteDatabase) {
   await db.execAsync(`

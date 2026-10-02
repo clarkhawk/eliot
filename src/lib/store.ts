@@ -10,7 +10,9 @@
  * vrai transport (WebSocket local) pour relayer les messages entre appareils.
  */
 import { useMemo, useSyncExternalStore } from "react";
-import type { InvitePayload, Message, Room } from "./types";
+import { normalizeCode, parseInvite } from "@ilot/shared";
+export { normalizeCode, parseInvite } from "@ilot/shared";
+import type { InvitePayload, Message, Room } from "@ilot/shared";
 
 const K_ROOMS = "ilot:rooms";
 const K_MSGS = (code: string) => `ilot:msgs:${code}`;
@@ -149,18 +151,6 @@ export function createRoom(input: {
 
 /* ───────── Rejoindre ───────── */
 
-export function normalizeCode(input: string): string | null {
-  const m = input.trim().toUpperCase().match(/^(?:ILOT)?[\s-]*([0-9]{4,6})$/);
-  return m ? `ILOT-${m[1]}` : null;
-}
-
-function validateInvite(input: InvitePayload): InvitePayload | null {
-  const code = normalizeCode(input.code);
-  const salon = input.salon.trim().slice(0, 40);
-  if (input.v !== 1 || !code || !salon || !Number.isFinite(input.exp) || input.exp <= Date.now()) return null;
-  return { v: 1, salon, code, exp: input.exp };
-}
-
 export type JoinResult =
   | { ok: true; room: Room }
   | { ok: false; error: string };
@@ -170,8 +160,8 @@ export function joinRoom(input: string | InvitePayload): JoinResult {
   const rooms = getRooms();
 
   if (typeof input !== "string") {
-    const invite = validateInvite(input);
-    if (!invite) return { ok: false, error: "Cette invitation est invalide ou expirée." };
+    const invite = parseInvite(JSON.stringify(input));
+    if (!invite || typeof invite === "string") return { ok: false, error: "Cette invitation est invalide ou expirée." };
     const existing = rooms.find((r) => r.code === invite.code);
     if (existing && existing.expiresAt > Date.now()) return { ok: true, room: existing };
     const room: Room = {
@@ -216,27 +206,6 @@ export function buildInvite(room: Room): InvitePayload {
 export function buildInviteLink(room: Room, origin: string): string {
   const p = new URLSearchParams({ code: room.code, n: room.name, e: String(room.expiresAt) });
   return `${origin}/join?${p.toString()}`;
-}
-
-/** Comprend un QR JSON, un lien /join?code=…, ou un simple code. */
-export function parseInvite(text: string): InvitePayload | string | null {
-  const t = text.trim();
-  if (!t) return null;
-  try {
-    const j = JSON.parse(t);
-    if (j && typeof j.code === "string" && typeof j.exp === "number") {
-      return validateInvite({ v: 1, salon: String(j.salon ?? j.code), code: j.code, exp: j.exp });
-    }
-  } catch {}
-  try {
-    const u = new URL(t);
-    const code = u.searchParams.get("code");
-    const exp = Number(u.searchParams.get("e"));
-    if (code && exp) {
-      return validateInvite({ v: 1, salon: u.searchParams.get("n") ?? code, code, exp });
-    }
-  } catch {}
-  return normalizeCode(t) ? t : null;
 }
 
 /* ───────── Messages ───────── */

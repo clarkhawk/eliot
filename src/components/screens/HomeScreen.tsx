@@ -26,6 +26,10 @@ export function HomeScreen() {
       <h1 className="mt-12 text-4xl font-bold tracking-tight">Bienvenue</h1>
       <p className="mt-2 text-[14px] text-muted">Configurez un espace temporaire pour échanger</p>
 
+      <p className="mt-5 rounded-xl border border-[#d8b23d]/50 bg-[#f7c948]/20 px-4 py-3 text-[13px] font-medium text-ink">
+        Démo : les messages restent sur cet appareil.
+      </p>
+
       <div className="mt-12 flex gap-3">
         <Button variant="tile" onClick={() => router.push("/create")}>
           Créer le salon
