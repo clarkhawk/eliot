@@ -1,10 +1,20 @@
 import { StatusBar } from "expo-status-bar";
+import { SQLiteProvider } from "expo-sqlite";
 import { useState } from "react";
 import { StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
+import { migrateDatabase } from "./src/shared/storage";
 
 type Screen = "home" | "create" | "join";
 
 export default function App() {
+  return (
+    <SQLiteProvider databaseName="ilot.db" onInit={migrateDatabase}>
+      <MobileApp />
+    </SQLiteProvider>
+  );
+}
+
+function MobileApp() {
   const [screen, setScreen] = useState<Screen>("home");
 
   return (
