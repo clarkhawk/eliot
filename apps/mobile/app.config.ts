@@ -5,6 +5,11 @@ const config = {
     name: "Îlot",
     slug: "ilot",
     version: rootPackage.version,
+    extra: {
+      eas: {
+        projectId: "5c450f17-25e5-4ff8-8ae9-b6c0afc2a8e1"
+      }
+    },
     orientation: "portrait",
     icon: "./assets/icon.png",
     userInterfaceStyle: "automatic",
