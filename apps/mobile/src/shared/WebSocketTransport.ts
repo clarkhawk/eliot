@@ -1,6 +1,7 @@
 import { decodePacket, encodePacket, type ChatMessage, type InvitePayload, type ServerPacket } from "@ilot/shared";
+import type { TransportStatus } from "./transportStatus";
 
-type TransportStatus = "idle" | "connecting" | "connected" | "reconnecting" | "closed";
+export type { TransportStatus };
 
 type TransportOptions = {
   url: string;

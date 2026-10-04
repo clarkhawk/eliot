@@ -9,7 +9,7 @@ import { Logo } from "./src/components/Logo";
 import { Scanner } from "./src/screens/Scanner";
 import { RoomScreen } from "./src/screens/RoomScreen";
 import { formatRemaining } from "./src/shared/format";
-import { getRooms, migrateDatabase, saveRoom } from "./src/shared/storage";
+import { getInvite, getRooms, migrateDatabase, saveRoom } from "./src/shared/storage";
 
 SplashScreen.preventAutoHideAsync();
 
@@ -32,9 +32,12 @@ function MobileApp() {
 
   useEffect(() => { SplashScreen.hideAsync(); }, []);
 
-  const enterRoom = useCallback((nextRoom: Room, nextInvite: InvitePayload) => {
+  const [guestJoin, setGuestJoin] = useState(false);
+
+  const enterRoom = useCallback((nextRoom: Room, nextInvite: InvitePayload, options?: { guestJoin?: boolean }) => {
     setRoom(nextRoom);
     setInvite(nextInvite);
+    setGuestJoin(Boolean(options?.guestJoin));
     setScreen("room");
   }, []);
 
@@ -54,7 +57,7 @@ function MobileApp() {
       {screen === "create" && <CreateScreen palette={palette} onBack={() => setScreen("home")} onRoom={enterRoom} />}
       {screen === "join" && <JoinScreen palette={palette} onBack={() => setScreen("home")} onRoom={enterRoom} />}
       {screen === "room" && room && invite && (
-        <RoomScreen invite={invite} onBack={() => setScreen("home")} palette={palette} room={room} />
+        <RoomScreen guestJoin={guestJoin} invite={invite} onBack={() => setScreen("home")} palette={palette} room={room} />
       )}
     </View>
   );
@@ -73,7 +76,7 @@ function HomeScreen({
   onTheme: () => void;
   onCreate: () => void;
   onJoin: () => void;
-  onRoom: (room: Room, invite: InvitePayload) => void;
+  onRoom: (room: Room, invite: InvitePayload, options?: { guestJoin?: boolean }) => void;
 }) {
   const db = useSQLiteContext();
   const [rooms, setRooms] = useState<Room[]>([]);
@@ -88,8 +91,10 @@ function HomeScreen({
     return () => clearInterval(timer);
   }, []);
 
-  function openRoom(entry: Room) {
-    onRoom(entry, { v: 1, salon: entry.name, code: entry.code, exp: entry.expiresAt });
+  async function openRoom(entry: Room) {
+    const stored = await getInvite(db, entry.code);
+    const fallback: InvitePayload = { v: 1, salon: entry.name, code: entry.code, exp: entry.expiresAt };
+    onRoom(entry, stored ?? fallback);
   }
 
   return (
@@ -150,7 +155,7 @@ function ActionButton({ palette, primary, onPress, label }: { palette: Palette; 
   );
 }
 
-function CreateScreen({ palette, onBack, onRoom }: { palette: Palette; onBack: () => void; onRoom: (room: Room, invite: InvitePayload) => void }) {
+function CreateScreen({ palette, onBack, onRoom }: { palette: Palette; onBack: () => void; onRoom: (room: Room, invite: InvitePayload, options?: { guestJoin?: boolean }) => void }) {
   const db = useSQLiteContext();
   const [name, setName] = useState("");
   const [duration, setDuration] = useState({ hours: 0, minutes: 50, seconds: 0 });
@@ -179,7 +184,7 @@ function CreateScreen({ palette, onBack, onRoom }: { palette: Palette; onBack: (
           try {
             const nextInvite = await IlotNetwork.startHost(name.trim(), Date.now() + durationMs);
             const nextRoom = { code: nextInvite.code, name: nextInvite.salon, createdAt: Date.now(), expiresAt: nextInvite.exp, host: true };
-            await saveRoom(db, nextRoom);
+            await saveRoom(db, nextRoom, nextInvite);
             onRoom(nextRoom, nextInvite);
           } catch (cause) {
             setError(cause instanceof Error ? cause.message : "Le dev client Android est requis.");
@@ -205,7 +210,7 @@ function Wheel({ palette, label, value, max, onChange }: { palette: Palette; lab
   );
 }
 
-function JoinScreen({ palette, onBack, onRoom }: { palette: Palette; onBack: () => void; onRoom: (room: Room, invite: InvitePayload) => void }) {
+function JoinScreen({ palette, onBack, onRoom }: { palette: Palette; onBack: () => void; onRoom: (room: Room, invite: InvitePayload, options?: { guestJoin?: boolean }) => void }) {
   const db = useSQLiteContext();
   const [message, setMessage] = useState("");
   const accept = (raw: string) => {
@@ -214,7 +219,9 @@ function JoinScreen({ palette, onBack, onRoom }: { palette: Palette; onBack: () 
       return setMessage("Cette invitation est invalide, expirée ou incomplète.");
     }
     const nextRoom = { code: parsed.code, name: parsed.salon, createdAt: Date.now(), expiresAt: parsed.exp, host: false };
-    saveRoom(db, nextRoom).then(() => onRoom(nextRoom, parsed)).catch(() => setMessage("Impossible d'enregistrer le salon sur cet appareil."));
+    saveRoom(db, nextRoom, parsed)
+      .then(() => onRoom(nextRoom, parsed, { guestJoin: true }))
+      .catch(() => setMessage("Impossible d'enregistrer le salon sur cet appareil."));
   };
   return (
     <View style={styles.content}>

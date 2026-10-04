@@ -9,3 +9,10 @@ export function formatRemaining(ms: number): string {
   const d = Math.floor(h / 24);
   return `expire dans ${d} jour${d > 1 ? "s" : ""}`;
 }
+
+export const pad2 = (n: number) => String(n).padStart(2, "0");
+
+export function formatTime(ts: number): string {
+  const d = new Date(ts);
+  return `${pad2(d.getHours())}:${pad2(d.getMinutes())}`;
+}
