@@ -1,6 +1,6 @@
 import type { SQLiteDatabase } from "expo-sqlite";
 import Storage from "expo-sqlite/kv-store";
-import type { ChatMessage, Room } from "@ilot/shared";
+import type { ChatMessage, InvitePayload, Room } from "@ilot/shared";
 
 export class StorageWriteError extends Error {
   constructor() {
@@ -31,19 +31,45 @@ export async function migrateDatabase(db: SQLiteDatabase) {
     );
     CREATE INDEX IF NOT EXISTS messages_room_time ON messages(room_code, timestamp);
   `);
+
+  const version = (await db.getFirstAsync<{ user_version: number }>("PRAGMA user_version"))?.user_version ?? 0;
+  if (version < 2) {
+    await db.execAsync(`
+      ALTER TABLE rooms ADD COLUMN invite_json TEXT;
+      PRAGMA user_version = 2;
+    `);
+  }
 }
 
-export async function saveRoom(db: SQLiteDatabase, room: Room) {
+export async function saveRoom(db: SQLiteDatabase, room: Room, invite?: InvitePayload) {
   await db.runAsync(
-    `INSERT INTO rooms (code, name, created_at, expires_at, is_host)
-     VALUES (?, ?, ?, ?, ?)
-     ON CONFLICT(code) DO UPDATE SET name = excluded.name, expires_at = excluded.expires_at, is_host = excluded.is_host`,
+    `INSERT INTO rooms (code, name, created_at, expires_at, is_host, invite_json)
+     VALUES (?, ?, ?, ?, ?, ?)
+     ON CONFLICT(code) DO UPDATE SET
+       name = excluded.name,
+       expires_at = excluded.expires_at,
+       is_host = excluded.is_host,
+       invite_json = COALESCE(excluded.invite_json, rooms.invite_json)`,
     room.code,
     room.name,
     room.createdAt,
     room.expiresAt,
     room.host ? 1 : 0,
+    invite ? JSON.stringify(invite) : null,
   );
+}
+
+export async function getInvite(db: SQLiteDatabase, code: string): Promise<InvitePayload | null> {
+  const row = await db.getFirstAsync<{ invite_json: string | null }>(
+    "SELECT invite_json FROM rooms WHERE code = ?",
+    code,
+  );
+  if (!row?.invite_json) return null;
+  try {
+    return JSON.parse(row.invite_json) as InvitePayload;
+  } catch {
+    return null;
+  }
 }
 
 export async function getRooms(db: SQLiteDatabase): Promise<Room[]> {
@@ -53,7 +79,7 @@ export async function getRooms(db: SQLiteDatabase): Promise<Room[]> {
     created_at: number;
     expires_at: number;
     is_host: number;
-  }>("SELECT * FROM rooms ORDER BY created_at DESC");
+  }>("SELECT code, name, created_at, expires_at, is_host FROM rooms ORDER BY created_at DESC");
   return rows.map((row) => ({
     code: row.code,
     name: row.name,

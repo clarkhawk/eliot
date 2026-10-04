@@ -23,11 +23,13 @@ class IlotForegroundService : Service() {
     val roomName = intent?.getStringExtra("roomName") ?: "Salon Îlot"
     val roomCode = intent?.getStringExtra("roomCode") ?: "ILOT-0000"
     val expiresAt = intent?.getDoubleExtra("expiresAt", 0.0) ?: 0.0
+    val createdAt = intent?.getDoubleExtra("createdAt", System.currentTimeMillis().toDouble()) ?: System.currentTimeMillis().toDouble()
     createChannel()
     startForeground(42, notification())
     val expiresAtMs = expiresAt.toLong()
+    val store = RoomMessageStore(this, roomCode)
     server = object : WebSocketServer(InetSocketAddress(port)) {
-      private val messages = mutableListOf<String>()
+      private val messages = store.load()
       private val sessions = mutableMapOf<WebSocket, Session>()
       private val failedAttempts = mutableMapOf<String, Int>()
 
@@ -72,7 +74,7 @@ class IlotForegroundService : Service() {
               sessions[conn] = session
               conn.send(JSONObject().apply {
                 put("type", "ready")
-                put("room", room(roomCode, roomName, expiresAt))
+                put("room", room(roomCode, roomName, createdAt, expiresAt))
                 put("sessionId", session.token)
               }.toString())
               conn.send(JSONObject().apply {
@@ -86,7 +88,8 @@ class IlotForegroundService : Service() {
                 return
               }
               val incoming = packet.getJSONObject("message")
-              incoming.put("id", UUID.randomUUID().toString())
+              val messageId = incoming.optString("id", "").trim()
+              incoming.put("id", if (messageId.isNotEmpty()) messageId else UUID.randomUUID().toString())
               incoming.put("roomCode", roomCode)
               incoming.put("authorId", session.token)
               incoming.put("author", session.pseudo)
@@ -96,6 +99,7 @@ class IlotForegroundService : Service() {
                 put("message", incoming)
               }.toString()
               messages.add(incoming.toString())
+              store.append(incoming.toString())
               broadcast(outgoing)
             }
           }
@@ -115,10 +119,10 @@ class IlotForegroundService : Service() {
         put("message", message)
       }.toString()
 
-      private fun room(code: String, name: String, expiresAt: Double) = JSONObject().apply {
+      private fun room(code: String, name: String, createdAt: Double, expiresAt: Double) = JSONObject().apply {
         put("code", code)
         put("name", name)
-        put("createdAt", System.currentTimeMillis())
+        put("createdAt", createdAt)
         put("expiresAt", expiresAt)
         put("host", true)
       }
@@ -129,6 +133,7 @@ class IlotForegroundService : Service() {
 
   override fun onDestroy() {
     server?.stop()
+    server = null
     super.onDestroy()
   }
 
@@ -150,13 +155,20 @@ class IlotForegroundService : Service() {
     private const val CHANNEL = "ilot-network"
     private const val MAX_ATTEMPTS = 5
     private data class Session(val token: String, val pseudo: String)
-    fun start(context: Context, port: Int, roomName: String, roomCode: String, expiresAt: Double) {
+
+    fun start(context: Context, port: Int, roomName: String, roomCode: String, createdAt: Double, expiresAt: Double) {
       val intent = Intent(context, IlotForegroundService::class.java)
         .putExtra("port", port)
         .putExtra("roomName", roomName)
         .putExtra("roomCode", roomCode)
+        .putExtra("createdAt", createdAt)
         .putExtra("expiresAt", expiresAt)
       if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) context.startForegroundService(intent) else context.startService(intent)
+    }
+
+    fun stop(context: Context, roomCode: String? = null) {
+      if (roomCode != null) RoomMessageStore(context, roomCode).clear()
+      context.stopService(Intent(context, IlotForegroundService::class.java))
     }
   }
 }
