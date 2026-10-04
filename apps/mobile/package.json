@@ -3,6 +3,7 @@
   "version": "0.1.0",
   "main": "index.ts",
   "dependencies": {
+    "@ilot/shared": "file:../../packages/shared",
     "expo": "~57.0.26",
     "expo-build-properties": "~57.0.22",
     "expo-camera": "~57.0.6",
