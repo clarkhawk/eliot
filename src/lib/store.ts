@@ -128,7 +128,6 @@ export function deleteRoom(code: string) {
   try {
     localStorage.removeItem(K_MSGS(code));
   } catch {}
-  emit();
 }
 
 export function generateCode(): string {
@@ -202,17 +201,6 @@ export function joinRoom(input: string | InvitePayload): JoinResult {
     return { ok: false, error: "Ce salon a expiré. Son historique reste consultable depuis l'accueil." };
   }
   return { ok: true, room: found };
-}
-
-/* ───────── Invitations ───────── */
-
-export function buildInvite(room: Room): InvitePayload {
-  return { v: 1, salon: room.name, code: room.code, exp: room.expiresAt };
-}
-
-export function buildInviteLink(room: Room, origin: string): string {
-  const p = new URLSearchParams({ code: room.code, n: room.name, e: String(room.expiresAt) });
-  return `${origin}/join?${p.toString()}`;
 }
 
 /* ───────── Messages ───────── */

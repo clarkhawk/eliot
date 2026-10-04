@@ -37,7 +37,7 @@ class IlotNetworkModule : Module() {
             putString("salon", name.take(40))
             putString("code", code)
             putDouble("exp", expiresAt)
-            putString("ssid", config.ssid)
+            putString("ssid", config.ssid?.trim()?.trim('"') ?: "")
             putString("password", config.passphrase)
             putString("url", "ws://192.168.43.1:$port")
           })

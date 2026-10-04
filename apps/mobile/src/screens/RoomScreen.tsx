@@ -1,24 +1,50 @@
 import type { ChatMessage, InvitePayload, Room } from "@ilot/shared";
 import { useSQLiteContext } from "expo-sqlite";
-import { useEffect, useId, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { FlatList, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
+import { InviteQr } from "../components/InviteQr";
+import { PseudoSheet } from "../components/PseudoSheet";
+import { IlotNetwork } from "ilot-network";
 import { WebSocketTransport } from "../shared/WebSocketTransport";
-import { getMessages, saveMessage, saveRoom } from "../shared/storage";
-import { IlotNetwork } from "../native/IlotNetwork";
+import { getMessages, preferences, saveMessage, saveRoom } from "../shared/storage";
 
-type Props = { room: Room; invite: InvitePayload; pseudo: string; onBack: () => void };
+type Palette = { ink: string; muted: string; surface: string; line: string; field: string; background: string };
 
-export function RoomScreen({ room, invite, pseudo, onBack }: Props) {
+type Props = {
+  room: Room;
+  invite: InvitePayload;
+  palette: Palette;
+  onBack: () => void;
+};
+
+function createClientId() {
+  return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, (c) => {
+    const r = (Math.random() * 16) | 0;
+    return (c === "x" ? r : (r & 0x3) | 0x8).toString(16);
+  });
+}
+
+export function RoomScreen({ room, invite, palette, onBack }: Props) {
   const db = useSQLiteContext();
   const [messages, setMessages] = useState<ChatMessage[]>([]);
-  const clientId = useId();
-  const [sessionId, setSessionId] = useState(clientId);
+  const clientIdRef = useRef(createClientId());
+  const [sessionId, setSessionId] = useState<string | null>(null);
+  const [pseudo, setPseudo] = useState<string | null>(null);
   const [text, setText] = useState("");
   const [status, setStatus] = useState("hors ligne");
   const [error, setError] = useState("");
   const [now, setNow] = useState(() => Date.now());
   const transportRef = useRef<WebSocketTransport | null>(null);
   const expired = room.expiresAt <= now;
+
+  useEffect(() => {
+    let active = true;
+    preferences.getPseudo().then((stored) => {
+      if (!active) return;
+      if (stored) setPseudo(stored);
+    });
+    return () => { active = false; };
+  }, []);
 
   useEffect(() => {
     const timer = setInterval(() => setNow(Date.now()), 1000);
@@ -28,12 +54,12 @@ export function RoomScreen({ room, invite, pseudo, onBack }: Props) {
   useEffect(() => {
     let active = true;
     getMessages(db, room.code).then((stored) => { if (active) setMessages(stored); }).catch(() => setError("Impossible de lire l'historique local."));
-    if (!invite.url || expired) return () => { active = false; };
+    if (!invite.url || expired || !pseudo) return () => { active = false; };
 
     const transport = new WebSocketTransport({
       url: invite.url,
       invite,
-      clientId,
+      clientId: clientIdRef.current,
       pseudo,
       onStatus: setStatus,
       onError: setError,
@@ -53,19 +79,21 @@ export function RoomScreen({ room, invite, pseudo, onBack }: Props) {
     });
     transportRef.current = transport;
     const connect = async () => {
-      if (invite.ssid && invite.password) await IlotNetwork.joinNetwork(invite.ssid, invite.password);
+      if (!room.host && invite.ssid && invite.password) {
+        await IlotNetwork.joinNetwork(invite.ssid, invite.password);
+      }
       transport.connect();
     };
     connect().catch(() => setError("Android n'a pas pu rejoindre le réseau local."));
     return () => { active = false; transport.close(); transportRef.current = null; };
-  }, [clientId, db, expired, invite, pseudo, room.code]);
+  }, [db, expired, invite, pseudo, room.code, room.host]);
 
   function send() {
     const value = text.trim();
-    if (!value || expired || !invite.url) return;
+    if (!value || expired || !invite.url || !sessionId || !pseudo) return;
     const message: Omit<ChatMessage, "roomCode"> = {
-      id: `${clientId}-${Date.now()}`,
-      authorId: clientId,
+      id: `${sessionId}-${Date.now()}`,
+      authorId: sessionId,
       author: pseudo,
       text: value.slice(0, 2000),
       ts: Date.now(),
@@ -75,46 +103,74 @@ export function RoomScreen({ room, invite, pseudo, onBack }: Props) {
   }
 
   return (
-    <View style={styles.container}>
-      <View style={styles.header}>
-        <TouchableOpacity onPress={onBack}><Text style={styles.back}>‹ Accueil</Text></TouchableOpacity>
+    <View style={[styles.container, { backgroundColor: palette.background }]}>
+      <View style={[styles.header, { borderBottomColor: palette.line }]}>
+        <TouchableOpacity onPress={onBack}><Text style={[styles.back, { color: palette.muted }]}>‹ Accueil</Text></TouchableOpacity>
         <View style={styles.headerText}>
-          <Text style={styles.title}>{room.name}</Text>
-          <Text style={styles.status}>{expired ? "salon expiré · lecture seule" : status}</Text>
+          <Text style={[styles.title, { color: palette.ink }]}>{room.name}</Text>
+          <Text style={[styles.status, { color: palette.muted }]}>{expired ? "salon expiré · lecture seule" : status}</Text>
         </View>
       </View>
+      {room.host && !expired && invite.url ? (
+        <InviteQr invite={invite} />
+      ) : null}
       <FlatList
         contentContainerStyle={styles.messages}
         data={messages}
         keyExtractor={(item) => item.id}
-        renderItem={({ item }) => <View style={[styles.bubble, item.authorId === clientId && styles.ownBubble]}><Text style={styles.author}>{item.author}</Text><Text style={styles.message}>{item.text}</Text></View>}
-        ListEmptyComponent={<Text style={styles.empty}>Aucun message pour l’instant.</Text>}
+        renderItem={({ item }) => {
+          const mine = sessionId !== null && item.authorId === sessionId;
+          return (
+            <View style={[styles.bubble, { backgroundColor: palette.surface }, mine && styles.ownBubble]}>
+              <Text style={[styles.author, { color: palette.muted }, mine && styles.ownAuthor]}>{mine ? "Moi" : item.author}</Text>
+              <Text style={[styles.message, { color: palette.ink }, mine && styles.ownMessage]}>{item.text}</Text>
+            </View>
+          );
+        }}
+        ListEmptyComponent={<Text style={[styles.empty, { color: palette.muted }]}>Aucun message pour l&apos;instant.</Text>}
       />
       {error ? <Text style={styles.error}>{error}</Text> : null}
       <View style={styles.composer}>
-        <TextInput editable={!expired} maxLength={2000} onChangeText={setText} placeholder={expired ? "Ce salon a expiré" : "Votre message…"} style={styles.input} value={text} />
-        <TouchableOpacity disabled={expired || !text.trim()} onPress={send} style={styles.send}><Text style={styles.sendText}>↑</Text></TouchableOpacity>
+        <TextInput
+          editable={!expired && Boolean(sessionId)}
+          maxLength={2000}
+          onChangeText={setText}
+          placeholder={expired ? "Ce salon a expiré" : sessionId ? "Votre message…" : "Connexion…"}
+          placeholderTextColor={palette.muted}
+          style={[styles.input, { backgroundColor: palette.surface, color: palette.ink }]}
+          value={text}
+        />
+        <TouchableOpacity
+          disabled={expired || !text.trim() || !sessionId}
+          onPress={send}
+          style={[styles.send, { backgroundColor: palette.ink, opacity: expired || !text.trim() || !sessionId ? 0.5 : 1 }]}
+        >
+          <Text style={[styles.sendText, { color: palette.background }]}>↑</Text>
+        </TouchableOpacity>
       </View>
+      <PseudoSheet onSubmit={setPseudo} open={!pseudo} palette={palette} />
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#e9eef1" },
-  header: { flexDirection: "row", alignItems: "center", gap: 16, paddingHorizontal: 20, paddingTop: 56, paddingBottom: 16, borderBottomWidth: 1, borderBottomColor: "#cbd4db" },
-  back: { color: "#53606d", fontSize: 15, fontWeight: "700" },
+  container: { flex: 1 },
+  header: { flexDirection: "row", alignItems: "center", gap: 16, paddingHorizontal: 20, paddingTop: 56, paddingBottom: 16, borderBottomWidth: 1 },
+  back: { fontSize: 15, fontWeight: "700" },
   headerText: { flex: 1 },
-  title: { color: "#0f1623", fontSize: 19, fontWeight: "800" },
-  status: { color: "#7b8591", fontSize: 12, marginTop: 3 },
+  title: { fontSize: 19, fontWeight: "800" },
+  status: { fontSize: 12, marginTop: 3 },
   messages: { flexGrow: 1, justifyContent: "flex-end", gap: 8, padding: 16 },
-  bubble: { alignSelf: "flex-start", maxWidth: "82%", paddingHorizontal: 14, paddingVertical: 10, borderRadius: 16, backgroundColor: "#ffffff" },
+  bubble: { alignSelf: "flex-start", maxWidth: "82%", paddingHorizontal: 14, paddingVertical: 10, borderRadius: 16 },
   ownBubble: { alignSelf: "flex-end", backgroundColor: "#0f1623" },
-  author: { color: "#7b8591", fontSize: 11, marginBottom: 3 },
-  message: { color: "#0f1623", fontSize: 15 },
-  empty: { alignSelf: "center", color: "#7b8591", fontSize: 13 },
+  author: { fontSize: 11, marginBottom: 3 },
+  ownAuthor: { color: "#aeb7c2" },
+  message: { fontSize: 15 },
+  ownMessage: { color: "#f4f6f8" },
+  empty: { alignSelf: "center", fontSize: 13 },
   error: { paddingHorizontal: 16, color: "#b42318", fontSize: 12 },
   composer: { flexDirection: "row", gap: 8, padding: 16, paddingBottom: 28 },
-  input: { flex: 1, height: 52, paddingHorizontal: 16, borderRadius: 18, backgroundColor: "#ffffff", color: "#0f1623" },
-  send: { width: 52, height: 52, alignItems: "center", justifyContent: "center", borderRadius: 18, backgroundColor: "#0f1623" },
-  sendText: { color: "#ffffff", fontSize: 22, fontWeight: "700" },
+  input: { flex: 1, height: 52, paddingHorizontal: 16, borderRadius: 18 },
+  send: { width: 52, height: 52, alignItems: "center", justifyContent: "center", borderRadius: 18 },
+  sendText: { fontSize: 22, fontWeight: "700" },
 });

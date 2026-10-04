@@ -6,4 +6,4 @@ type NativeIlotNetwork = {
   joinNetwork: (ssid: string, password: string) => Promise<void>;
 };
 
-export default requireNativeModule<NativeIlotNetwork>("IlotNetwork");
+export const IlotNetwork = requireNativeModule<NativeIlotNetwork>("IlotNetwork");
