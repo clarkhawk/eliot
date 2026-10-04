@@ -32,7 +32,7 @@ export function HomeScreen() {
 
       <div className="mt-12 flex gap-3">
         <Button variant="tile" onClick={() => router.push("/create")}>
-          Créer le salon
+          Créer un salon
         </Button>
         <Button variant="tile" onClick={() => router.push("/join")}>
           Rejoindre un salon

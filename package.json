@@ -1,33 +1,19 @@
 {
-  "name": "ilot",
-  "version": "0.1.0",
+  "name": "ilot-workspace",
   "private": true,
-  "description": "Îlot — messagerie offline en réseau local (interface Next.js)",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
   "scripts": {
-    "dev": "next dev",
-    "build": "next build",
-    "start": "next start",
-    "typecheck": "tsc --noEmit",
-    "lint": "eslint .",
+    "dev": "npm run dev -w web",
+    "dev:mobile": "npm run start -w mobile",
+    "build": "npm run build --workspaces --if-present",
+    "lint": "npm run lint --workspaces --if-present",
     "test": "vitest run"
   },
-  "dependencies": {
-    "geist": "^1.7.2",
-    "jsqr": "^1.4.0",
-    "lucide-react": "^1.50.0",
-    "next": "^15.5.27",
-    "react": "^19.3.0",
-    "react-dom": "^19.3.0"
-  },
   "devDependencies": {
-    "@tailwindcss/postcss": "^4.3.3",
-    "@types/node": "^26.6.4",
-    "@types/react": "^19.3.0",
-    "@types/react-dom": "^19.3.0",
-    "eslint": "^8.57.1",
-    "eslint-config-next": "^15.5.27",
-    "tailwindcss": "^4.3.3",
-    "typescript": "^5.9.3",
     "vitest": "^5.0.3"
-  }
+  },
+  "version": "0.1.0"
 }

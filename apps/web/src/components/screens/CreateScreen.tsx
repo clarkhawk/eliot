@@ -67,7 +67,7 @@ export function CreateScreen() {
       </div>
 
       <footer className="px-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] pt-3">
-        <Button onClick={submit}>Créer le salon</Button>
+        <Button onClick={submit}>Créer un salon</Button>
       </footer>
     </>
   );

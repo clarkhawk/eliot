@@ -64,7 +64,7 @@ export function JoinScreen() {
           {error ? (
             <p role="alert" className="text-danger">{error}</p>
           ) : (
-            <p className="text-muted">Gardez l&apos;hôte à proximité pour une connexion locale.</p>
+            <p className="text-muted">Gardez l&apos;hôte à proximité pour une connexion fiable et stable.</p>
           )}
         </div>
       </form>
