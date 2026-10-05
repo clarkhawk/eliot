@@ -7,9 +7,6 @@ on:
 jobs:
   web:
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: apps/web
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -17,11 +14,15 @@ jobs:
           node-version: 22
           cache: npm
           cache-dependency-path: package-lock.json
+      # Installe toutes les dépendances du monorepo depuis la racine
       - run: npm ci
-        working-directory: .
+      # Chaque script s'exécute dans le répertoire de l'application web
       - run: npm run typecheck
+        working-directory: apps/web
       - run: npm run lint
+        working-directory: apps/web
       - run: npm run build
+        working-directory: apps/web
 
   mobile:
     runs-on: ubuntu-latest
