@@ -2,5 +2,8 @@
   "name": "ilot-network",
   "version": "0.1.0",
   "private": true,
-  "main": "src/index.ts"
+  "main": "src/index.ts",
+  "dependencies": {
+    "expo-modules-core": "^1.11.0"
+  }
 }

@@ -2,6 +2,9 @@ import nextPlugin from "@next/eslint-plugin-next";
 
 const eslintConfig = [
   {
+    ignores: [".next/**", "dist/**"],
+  },
+  {
     plugins: {
       "@next/next": nextPlugin,
     },
