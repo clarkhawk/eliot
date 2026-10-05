@@ -13,16 +13,11 @@ jobs:
         with:
           node-version: 22
           cache: npm
-          cache-dependency-path: package-lock.json
-      # Installe toutes les dépendances du monorepo depuis la racine
       - run: npm ci
-      # Chaque script s'exécute dans le répertoire de l'application web
-      - run: npm run typecheck
-        working-directory: apps/web
-      - run: npm run lint
-        working-directory: apps/web
-      - run: npm run build
-        working-directory: apps/web
+      - run: npm run typecheck --workspace=web
+      - run: npm run lint --workspace=web
+      - run: npm run test
+      - run: npm run build --workspace=web
 
   mobile:
     runs-on: ubuntu-latest
