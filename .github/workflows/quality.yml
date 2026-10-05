@@ -14,10 +14,10 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
-      - run: npm run typecheck --workspace=web
-      - run: npm run lint --workspace=web
+      - run: npm --workspace=web run typecheck
+      - run: npm --workspace=web run lint
       - run: npm run test
-      - run: npm run build --workspace=web
+      - run: npm --workspace=web run build
 
   mobile:
     runs-on: ubuntu-latest
