@@ -14,10 +14,10 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
-      - run: npm run typecheck
-      - run: npm run lint
+      - run: npm run typecheck --workspace=web
+      - run: npm run lint --workspace=web
       - run: npm run test
-      - run: npm run build
+      - run: npm run build --workspace=web
 
   mobile:
     runs-on: ubuntu-latest
@@ -30,6 +30,6 @@ jobs:
         with:
           node-version: 22
           cache: npm
-          cache-dependency-path: apps/mobile/package-lock.json
-      - run: npm ci
-      - run: npm exec tsc -- --noEmit -p tsconfig.json
+          cache-dependency-path: package-lock.json
+      - run: npm install
+      - run: npm exec tsc -- --noEmit
