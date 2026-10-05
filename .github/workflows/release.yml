@@ -17,15 +17,27 @@ jobs:
           node-version: 22
           cache: npm
           cache-dependency-path: apps/mobile/package-lock.json
-      - run: npm ci
+      - name: Install mobile dependencies
+        run: npm ci
         working-directory: apps/mobile
       - name: Build APK with EAS
         env:
           EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
         run: |
           cd apps/mobile
-          npx eas-cli@latest build --platform android --profile preview --non-interactive --json > eas-build.json
-          node -e "const fs=require('fs'); const data=JSON.parse(fs.readFileSync('eas-build.json','utf8')); const url=data[0]?.artifacts?.buildUrl || data[0]?.artifactUrl; if (!url) throw new Error('EAS did not return an APK URL'); fs.writeFileSync('apk-url.txt', url);"
+          npx eas-cli@latest build --platform android --profile preview --non-interactive --wait --json > eas-build.json
+          node <<'NODE'
+          const fs = require("fs");
+          const data = JSON.parse(fs.readFileSync("eas-build.json", "utf8"));
+          const build = Array.isArray(data) ? data[0] : data;
+          if (!build || build.status !== "FINISHED") {
+            const message = build?.error?.message ?? "EAS build did not finish successfully";
+            throw new Error(message);
+          }
+          const url = build.artifacts?.buildUrl ?? build.artifacts?.applicationArchiveUrl ?? build.artifactUrl;
+          if (!url) throw new Error("EAS did not return an APK URL");
+          fs.writeFileSync("apk-url.txt", url);
+          NODE
           curl -L "$(cat apk-url.txt)" -o ../../ilot-android.apk
           sha256sum ../../ilot-android.apk | tee ../../ilot-android.apk.sha256
       - name: Publish GitHub Release
